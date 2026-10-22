@@ -1,1 +1,1 @@
-"use strict";const APP_VERSION="0.44.3",APP_DATE="2026-10-21";
+"use strict";const APP_VERSION="0.49.0",APP_DATE="2026-10-22",APP_CANAL="prod";
