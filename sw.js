@@ -35,7 +35,7 @@ async function installer(premiere) {
       await neuf.put(u, r);
       fait += t;
       const p = fait / total;
-      if (p - dernier > 0.02 || p >= 1) { dernier = p; annoncer({ type: 'progres', progres: Math.min(1, p), premiere }); }
+      if (p - dernier > 0.02 || p >= 1) { dernier = p; annoncer({ type: 'progres', progres: Math.min(1, p), premiere, fait, total }); }
     }
   };
   try {
@@ -49,9 +49,14 @@ async function installer(premiere) {
   actif = distant.cache;
   await annoncer({ type: 'pret', premiere });
 }
+async function supprimer() {
+  actif = null;
+  for (const k of await caches.keys()) if (k.startsWith('grip-')) await caches.delete(k);
+  await annoncer({ type: 'supprime' });
+}
 self.addEventListener('install', (e) => {
-  // Un nouveau texte de service worker garde le cache en place ; seule la toute première fois télécharge.
-  e.waitUntil(cacheActif().then((nom) => (nom ? null : installer(true))).then(() => self.skipWaiting()));
+  // Rien ne se télécharge à l'installation : un cache déjà là reste en place, et sinon on attend qu'on le demande.
+  e.waitUntil(self.skipWaiting());
 });
 self.addEventListener('activate', (e) => {
   e.waitUntil(caches.keys().then(async (ks) => {
@@ -59,7 +64,10 @@ self.addEventListener('activate', (e) => {
   }).then(() => self.clients.claim()));
 });
 self.addEventListener('message', (e) => {
-  if (e.data && e.data.type === 'mettre-a-jour') e.waitUntil(installer(false).catch(() => annoncer({ type: 'echec' })));
+  const type = e.data && e.data.type;
+  if (type === 'telecharger') e.waitUntil(installer(true).catch(() => annoncer({ type: 'echec', premiere: true })));
+  else if (type === 'mettre-a-jour') e.waitUntil(installer(false).catch(() => annoncer({ type: 'echec' })));
+  else if (type === 'supprimer') e.waitUntil(supprimer());
 });
 self.addEventListener('fetch', (e) => {
   const req = e.request;
